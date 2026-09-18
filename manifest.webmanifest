@@ -1,0 +1,15 @@
+{
+  "name": "Recall Ledger",
+  "short_name": "Recall",
+  "description": "Spaced repetition study planner: lecture, UWorld, flashcards, reviews.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#EDEEE8",
+  "theme_color": "#1F2A24",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

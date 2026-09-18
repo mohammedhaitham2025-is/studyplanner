@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Recall Ledger — Spaced Repetition Study Planner</title>
+<meta name="description" content="Lecture to UWorld to flashcards to spaced review, tracked across your devices.">
+<meta name="theme-color" content="#1F2A24">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Recall Ledger">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600;6..72,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EDEEE8;
+    --paper-raised:#F7F7F3;
+    --ink:#1F2A24;
+    --ink-soft:#5B6660;
+    --line:#D7D8D0;
+    --line-strong:#B9BBB0;
+    --accent:#2F6F5E;
+    --teal:var(--accent);
+    --teal-deep:color-mix(in srgb, var(--accent), #000 22%);
+    --amber:#B0791E;
+    --clay:#AE4530;
+    --clay-bg:#F7E3DD;
+    --amber-bg:#F6ECD6;
+    --green-bg:color-mix(in srgb, var(--accent), #FFF 84%);
+    --white:#FFFFFF;
+    --radius:3px;
+    --base:14px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#171B18;
+      --paper-raised:#1E2320;
+      --ink:#EDEFEA;
+      --ink-soft:#9AA39C;
+      --line:#333A34;
+      --line-strong:#454D46;
+      --teal:color-mix(in srgb, var(--accent), #FFF 34%);
+      --teal-deep:color-mix(in srgb, var(--accent), #FFF 52%);
+      --amber:#E0AE5C;
+      --clay:#E08268;
+      --clay-bg:#3A2620;
+      --amber-bg:#392F1D;
+      --green-bg:color-mix(in srgb, var(--accent), #000 58%);
+      --white:#20241F;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#171B18;
+    --paper-raised:#1E2320;
+    --ink:#EDEFEA;
+    --ink-soft:#9AA39C;
+    --line:#333A34;
+    --line-strong:#454D46;
+    --teal:color-mix(in srgb, var(--accent), #FFF 34%);
+    --teal-deep:color-mix(in srgb, var(--accent), #FFF 52%);
+    --amber:#E0AE5C;
+    --clay:#E08268;
+    --clay-bg:#3A2620;
+    --amber-bg:#392F1D;
+    --green-bg:color-mix(in srgb, var(--accent), #000 58%);
+    --white:#20241F;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', system-ui, sans-serif;
+    font-size:var(--base);
+    line-height:1.5;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:1180px; margin:0 auto; padding:28px 20px 80px;}
+
+  header.top{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    border-bottom:2px solid var(--ink); padding-bottom:14px; margin-bottom:14px;
+    flex-wrap:wrap; gap:10px;
+  }
+  header.top h1{
+    font-family:'Newsreader', serif; font-weight:600; font-size:30px; margin:0;
+    letter-spacing:0.2px;
+  }
+  header.top .sub{color:var(--ink-soft); font-size:13px; margin-top:4px; max-width:560px;}
+  header.top .date{font-family:'IBM Plex Mono', monospace; font-size:13px; color:var(--ink-soft); text-align:right;}
+
+  .syncbar{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    background:var(--paper-raised); border:1px solid var(--line);
+    padding:8px 12px; margin-bottom:22px; font-size:12.5px; color:var(--ink-soft);
+  }
+  .syncbar .dot{width:8px; height:8px; border-radius:50%; background:var(--line-strong); flex:none;}
+  .syncbar .dot.ok{background:var(--teal);}
+  .syncbar .dot.busy{background:var(--amber);}
+  .syncbar .dot.bad{background:var(--clay);}
+  .syncbar .spacer{flex:1;}
+
+  .stats{
+    display:grid; grid-template-columns:repeat(5,1fr); gap:1px;
+    background:var(--line); border:1px solid var(--line); margin-bottom:26px;
+  }
+  .stat{background:var(--paper-raised); padding:14px 16px;}
+  .stat .n{font-family:'IBM Plex Mono', monospace; font-size:26px; font-weight:600; line-height:1;}
+  .stat .l{color:var(--ink-soft); font-size:11.5px; margin-top:6px;}
+  .stat.overdue .n{color:var(--clay);}
+  .stat.today .n{color:var(--amber);}
+  .stat.complete .n{color:var(--teal-deep);}
+
+  .tabs{display:flex; gap:2px; margin-bottom:18px; border-bottom:1px solid var(--line);}
+  .tab{
+    padding:9px 16px; cursor:pointer; font-size:13.5px; color:var(--ink-soft);
+    border-bottom:2px solid transparent; user-select:none;
+  }
+  .tab.active{color:var(--ink); border-bottom-color:var(--teal); font-weight:500;}
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  /* Queue */
+  .queue-group{margin-bottom:22px;}
+  .queue-group h3{
+    font-family:'Newsreader', serif; font-size:17px; font-weight:600; margin:0 0 8px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .queue-group h3 .count{
+    font-family:'IBM Plex Mono', monospace; font-size:12px; background:var(--ink);
+    color:var(--paper); padding:1px 7px; border-radius:10px; font-weight:500;
+  }
+  .qrow{
+    display:flex; align-items:center; gap:12px; padding:9px 12px;
+    background:var(--paper-raised); border:1px solid var(--line); border-left-width:3px;
+    margin-bottom:6px; font-size:13.5px;
+  }
+  .qrow.od{border-left-color:var(--clay); background:var(--clay-bg);}
+  .qrow.tod{border-left-color:var(--amber); background:var(--amber-bg);}
+  .qrow.up{border-left-color:var(--line-strong);}
+  .qrow .qdate{font-family:'IBM Plex Mono', monospace; color:var(--ink-soft); min-width:76px;}
+  .qrow .qmod{font-weight:500; min-width:150px;}
+  .qrow .qtitle{color:var(--ink-soft); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .qrow .qstep{font-size:12px; padding:2px 8px; border:1px solid var(--line-strong); border-radius:10px; color:var(--ink-soft);}
+  .qrow button{margin-left:auto;}
+  .empty-note{color:var(--ink-soft); font-style:italic; padding:14px 0;}
+
+  /* Buttons */
+  button{
+    font-family:'IBM Plex Sans', sans-serif; font-size:12.5px; cursor:pointer;
+    border:1px solid var(--ink); background:var(--ink); color:var(--paper);
+    padding:6px 12px; border-radius:var(--radius);
+  }
+  button.ghost{background:transparent; color:var(--ink); border-color:var(--line-strong);}
+  button.ghost:hover{border-color:var(--ink);}
+  button.small{padding:3px 9px; font-size:11.5px;}
+  button.danger{background:transparent; color:var(--clay); border-color:var(--clay);}
+  button.link{background:none; border:none; color:var(--ink-soft); text-decoration:underline; padding:4px; font-size:12px;}
+  button:hover{opacity:0.88;}
+  button:disabled{opacity:0.5; cursor:default;}
+  :focus-visible{outline:2px solid var(--teal); outline-offset:2px;}
+
+  /* Add form */
+  .addbar{
+    display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;
+    background:var(--paper-raised); border:1px solid var(--line); padding:14px; margin-bottom:20px;
+  }
+  .field{display:flex; flex-direction:column; gap:4px;}
+  .field label{font-size:11px; color:var(--ink-soft); letter-spacing:0.2px;}
+  input, select, textarea{
+    font-family:'IBM Plex Sans', sans-serif; font-size:16px; padding:6px 8px;
+    border:1px solid var(--line-strong); border-radius:var(--radius); background:var(--white); color:var(--ink);
+    max-width:100%;
+  }
+  @media (min-width:861px){ input, select, textarea{font-size:13px;} }
+  input[type=date]{font-family:'IBM Plex Mono', monospace;}
+  input[type=checkbox]{width:16px; height:16px; accent-color:var(--teal);}
+  .field.title{flex:1; min-width:180px;}
+  .chips{display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 18px;}
+  .chip{
+    font-size:12px; padding:4px 10px; border:1px solid var(--line-strong); border-radius:12px;
+    color:var(--ink-soft); cursor:pointer; background:var(--white);
+  }
+  .chip:hover{border-color:var(--teal); color:var(--teal-deep);}
+
+  /* Table */
+  .tablewrap{overflow-x:auto; border:1px solid var(--line);}
+  table{border-collapse:collapse; width:100%; min-width:900px; background:var(--white);}
+  thead th{
+    text-align:left; font-size:10.5px; letter-spacing:0.3px;
+    color:var(--ink-soft); font-weight:500; padding:9px 8px; border-bottom:1px solid var(--line-strong);
+    background:var(--paper-raised); white-space:nowrap; position:sticky; top:0;
+  }
+  tbody td{padding:8px; border-bottom:1px solid var(--line); vertical-align:middle; font-size:12.5px;}
+  tbody tr:hover{background:var(--paper-raised);}
+  td.date, td.rep{font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--ink-soft); white-space:nowrap;}
+  td.mod{font-weight:500;}
+  td.rep.od{color:var(--clay); font-weight:600;}
+  td.rep.tod{color:var(--amber); font-weight:600;}
+  select.status{font-size:11.5px; padding:3px 5px;}
+  select.status.done{color:var(--teal-deep); border-color:var(--teal); background:var(--green-bg);}
+  select.status.pending{color:var(--ink-soft);}
+  input.pct{width:64px; font-family:'IBM Plex Mono', monospace; font-size:12px; padding:3px 5px;}
+  .mastery{
+    font-size:11px; font-weight:600; padding:3px 8px; border-radius:10px; white-space:nowrap;
+    display:inline-block;
+  }
+  .mastery.Complete{background:var(--green-bg); color:var(--teal-deep);}
+  .mastery.Behind{background:var(--clay-bg); color:var(--clay);}
+  .mastery.In-Progress{background:var(--amber-bg); color:var(--amber);}
+  tr.row-complete{background:var(--green-bg);}
+  tr.row-complete:hover{background:var(--green-bg);}
+  td.del{text-align:center;}
+
+  .toolbar{display:flex; justify-content:space-between; align-items:center; margin:22px 0 10px; flex-wrap:wrap; gap:10px;}
+  .toolbar .filters{display:flex; gap:8px; flex-wrap:wrap;}
+  .toolbar .actions{display:flex; gap:8px; flex-wrap:wrap;}
+
+  footer.note{margin-top:34px; padding-top:14px; border-top:1px solid var(--line); color:var(--ink-soft); font-size:11.5px;}
+  .hidden{display:none !important;}
+
+  /* Settings */
+  .setgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:18px; align-items:start;}
+  .card{background:var(--paper-raised); border:1px solid var(--line); padding:16px 16px 18px;}
+  .card h3{
+    font-family:'Newsreader', serif; font-size:17px; font-weight:600; margin:0 0 4px;
+  }
+  .card .hint{color:var(--ink-soft); font-size:12px; margin:0 0 14px;}
+  .card.wide{grid-column:1 / -1;}
+  .srow{
+    display:flex; align-items:center; gap:10px; padding:8px 0;
+    border-top:1px solid var(--line);
+  }
+  .srow:first-of-type{border-top:none;}
+  .srow label.name{flex:1; font-size:13px;}
+  .srow input[type=text]{flex:1; min-width:100px;}
+  .srow input.days{width:74px; font-family:'IBM Plex Mono', monospace;}
+  .srow .tagname{font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-soft); min-width:52px;}
+  .stack{display:flex; flex-direction:column; gap:10px;}
+  .stack .field input{width:100%;}
+  .segment{display:flex; gap:0; border:1px solid var(--line-strong); border-radius:var(--radius); overflow:hidden; width:fit-content;}
+  .segment button{
+    background:transparent; color:var(--ink-soft); border:none; border-right:1px solid var(--line-strong);
+    border-radius:0; padding:6px 14px;
+  }
+  .segment button:last-child{border-right:none;}
+  .segment button.on{background:var(--ink); color:var(--paper);}
+  .swatches{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:4px;}
+  .swatch{
+    width:26px; height:26px; border-radius:50%; border:2px solid transparent; cursor:pointer;
+    padding:0; outline-offset:2px;
+  }
+  .swatch.on{border-color:var(--ink);}
+  .tagline{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;}
+  .tag{
+    display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:4px 6px 4px 10px;
+    border:1px solid var(--line-strong); border-radius:12px; background:var(--white); color:var(--ink);
+  }
+  .tag button{
+    background:none; border:none; color:var(--ink-soft); padding:0 2px; font-size:14px; line-height:1;
+  }
+  .tag button:hover{color:var(--clay);}
+  .inline-add{display:flex; gap:8px;}
+  .inline-add input{flex:1;}
+  .ttrow{display:flex; gap:8px; align-items:center; padding:8px 0; border-top:1px solid var(--line); flex-wrap:wrap;}
+  .ttrow:first-of-type{border-top:none;}
+  .ttrow input.day{width:92px;}
+  .ttrow input.subs{flex:1; min-width:180px;}
+  .danger-zone{border-color:var(--clay);}
+  .saved-flash{color:var(--teal-deep); font-size:12px; margin-left:8px;}
+
+  /* Sign-in dialog */
+  .overlay{
+    position:fixed; inset:0; background:rgba(15,20,17,0.55); z-index:50;
+    display:flex; align-items:center; justify-content:center; padding:18px;
+  }
+  .dialog{
+    background:var(--paper-raised); border:1px solid var(--line-strong); border-radius:var(--radius);
+    padding:22px; width:100%; max-width:380px;
+  }
+  .dialog h2{font-family:'Newsreader', serif; font-size:22px; margin:0 0 6px;}
+  .dialog p{color:var(--ink-soft); font-size:12.5px; margin:0 0 16px;}
+  .dialog .field{margin-bottom:12px;}
+  .dialog input{width:100%;}
+  .dialog .row{display:flex; gap:8px; align-items:center; margin-top:4px;}
+  .dialog .msg{font-size:12px; margin-top:12px; min-height:18px;}
+  .dialog .msg.bad{color:var(--clay);}
+  .dialog .msg.good{color:var(--teal-deep);}
+
+  /* Mobile */
+  @media (max-width:860px){
+    .wrap{padding:18px 14px 70px;}
+    header.top{align-items:flex-start;}
+    header.top h1{font-size:24px;}
+    header.top .date{text-align:left;}
+    .stats{grid-template-columns:repeat(2,1fr);}
+    .stat{padding:12px;}
+    .stat .n{font-size:22px;}
+    .tabs{position:sticky; top:0; background:var(--paper); z-index:10;}
+    .tab{flex:1; text-align:center; padding:11px 8px; font-size:13px;}
+
+    .qrow{flex-wrap:wrap; gap:6px 10px; align-items:flex-start;}
+    .qrow .qmod{min-width:0;}
+    .qrow .qtitle{flex-basis:100%; white-space:normal;}
+    .qrow button{margin-left:0;}
+
+    .addbar .field{width:100%;}
+    .addbar .field input{width:100%;}
+    .addbar > button{width:100%;}
+    .toolbar{flex-direction:column; align-items:stretch;}
+    .toolbar .filters input{flex:1;}
+
+    .tablewrap{border:none; overflow:visible;}
+    table{min-width:0; background:transparent;}
+    thead{display:none;}
+    tbody, tbody tr, tbody td{display:block; width:100%;}
+    tbody tr{
+      background:var(--white); border:1px solid var(--line); border-left-width:3px;
+      border-left-color:var(--line-strong); margin-bottom:12px; padding:4px 0;
+    }
+    tbody tr:hover{background:var(--white);}
+    tbody tr.row-complete{background:var(--green-bg); border-left-color:var(--teal);}
+    tbody td{
+      border-bottom:1px dotted var(--line); padding:7px 12px;
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+    }
+    tbody td:last-child{border-bottom:none;}
+    tbody td::before{content:attr(data-label); color:var(--ink-soft); font-size:11px; flex:none;}
+    tbody td.del{justify-content:flex-end;}
+    td.rep{white-space:normal;}
+    input.pct{width:80px;}
+    .setgrid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <h1 id="app-title">Recall Ledger</h1>
+      <div class="sub" id="app-sub"></div>
+    </div>
+    <div class="date" id="today-label"></div>
+  </header>
+
+  <div class="syncbar" id="syncbar">
+    <span class="dot" id="sync-dot"></span>
+    <span id="sync-text">Starting up</span>
+    <span class="spacer"></span>
+    <button class="ghost small hidden" id="btn-sync">Sync now</button>
+    <button class="ghost small hidden" id="btn-signin-open">Sign in</button>
+    <button class="ghost small hidden" id="btn-signout">Sign out</button>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="today">Today's Queue</div>
+    <div class="tab" data-tab="ledger">Lecture Ledger</div>
+    <div class="tab" data-tab="settings">Settings</div>
+  </div>
+
+  <!-- TODAY -->
+  <div class="panel active" id="panel-today">
+    <div id="queue-root"></div>
+  </div>
+
+  <!-- LEDGER -->
+  <div class="panel" id="panel-ledger">
+
+    <div class="addbar">
+      <div class="field">
+        <label for="in-date">Date</label>
+        <input type="date" id="in-date">
+      </div>
+      <div class="field">
+        <label for="in-module">Module / system</label>
+        <input type="text" id="in-module" list="module-list" placeholder="Cardiology">
+        <datalist id="module-list"></datalist>
+      </div>
+      <div class="field title">
+        <label for="in-title">Lecture title / topic</label>
+        <input type="text" id="in-title" placeholder="e.g. Heart failure — pathophysiology">
+      </div>
+      <button id="btn-add">Add lecture</button>
+    </div>
+
+    <div class="chips" id="timetable-chips"></div>
+
+    <div class="toolbar">
+      <div class="filters">
+        <select id="filter-status" class="status">
+          <option value="all">All lectures</option>
+          <option value="Behind">Behind only</option>
+          <option value="In Progress">In progress only</option>
+          <option value="Complete">Complete only</option>
+        </select>
+        <select id="filter-module"><option value="all">All modules</option></select>
+        <input type="text" id="filter-search" placeholder="Search module or title…" style="min-width:180px;">
+      </div>
+      <div class="actions">
+        <button class="ghost small" id="btn-export-json">Export backup (.json)</button>
+        <button class="ghost small" id="btn-export-csv">Export CSV</button>
+        <label class="ghost small" style="display:inline-flex;align-items:center;padding:3px 9px;border:1px solid var(--line-strong);border-radius:3px;cursor:pointer;font-size:11.5px;">
+          Import backup
+          <input type="file" id="file-import" accept="application/json" class="hidden">
+        </label>
+      </div>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr id="table-head"></tr></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+    <div class="empty-note hidden" id="empty-note">No lectures logged yet — add your first one above, or use the timetable shortcuts.</div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="panel" id="panel-settings">
+    <div class="setgrid" id="settings-root"></div>
+  </div>
+
+  <footer class="note" id="footer-note"></footer>
+
+</div>
+
+<!-- Sign-in dialog -->
+<div class="overlay hidden" id="auth-overlay">
+  <div class="dialog">
+    <h2>Sign in to sync</h2>
+    <p>Use the same email and password on your phone and your laptop, and both will show the same ledger and the same settings.</p>
+    <div class="field">
+      <label for="auth-email">Email</label>
+      <input type="email" id="auth-email" autocomplete="email" inputmode="email">
+    </div>
+    <div class="field">
+      <label for="auth-password">Password</label>
+      <input type="password" id="auth-password" autocomplete="current-password">
+    </div>
+    <div class="row">
+      <button id="btn-signin">Sign in</button>
+      <button class="ghost" id="btn-signup">Create account</button>
+    </div>
+    <div class="msg" id="auth-msg"></div>
+    <div class="row">
+      <button class="link" id="btn-auth-close">Keep using this device only</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="./config.js"></script>
+<script>
+(function(){
+  'use strict';
+
+  /* ================= storage keys ================= */
+  const STORE_KEY = 'recall_ledger_lectures_v1';
+  const DIRTY_KEY = 'recall_ledger_dirty_v1';
+  const SET_KEY = 'recall_ledger_settings_v1';
+  const SET_DIRTY_KEY = 'recall_ledger_settings_dirty_v1';
+  const SKIP_AUTH_KEY = 'recall_ledger_skip_auth_v1';
+
+  /* ================= settings ================= */
+  const ACCENTS = [
+    {name:'Pine', hex:'#2F6F5E'},
+    {name:'Ocean', hex:'#2B5F86'},
+    {name:'Plum', hex:'#6B3F73'},
+    {name:'Clay', hex:'#A15334'},
+    {name:'Moss', hex:'#5A6B2F'},
+    {name:'Slate', hex:'#4A5458'}
+  ];
+
+  function defaults(){
+    return {
+      title: 'Recall Ledger',
+      subtitle: 'Lecture → UWorld → flashcards → spaced review, tracked automatically.',
+      theme: 'system',
+      accent: '#2F6F5E',
+      density: 'normal',
+      lookahead: 3,
+      startTab: 'today',
+      steps: [
+        {key:'primary', label:'Primary reading', enabled:true},
+        {key:'uworld', label:'UWorld Qbank', enabled:true, score:true},
+        {key:'flashcards', label:'Flashcards', enabled:true}
+      ],
+      reps: [
+        {key:'rep1', label:'Rep 1', days:1, enabled:true},
+        {key:'rep2', label:'Rep 2', days:3, enabled:true},
+        {key:'rep3', label:'Rep 3', days:7, enabled:true},
+        {key:'rep4', label:'Rep 4', days:21, enabled:true}
+      ],
+      modules: ['Cardiology','GIT','Respiratory','Paediatrics','Obstetrics','Community & Family Medicine','Forensic Medicine','Pathology','Pharmacology'],
+      timetable: [
+        {day:'Sun', subjects:['Cardiology','GIT','Obstetrics']},
+        {day:'Mon', subjects:['Community & Family Medicine','Obstetrics','Forensic Medicine']},
+        {day:'Tue', subjects:['Respiratory','Paediatrics','Community & Family Medicine']}
+      ],
+      updatedAt: new Date(0).toISOString()
+    };
+  }
+
+  let S = defaults();
+  let settingsDirty = false;
+
+  function loadSettings(){
+    const base = defaults();
+    try{
+      const raw = localStorage.getItem(SET_KEY);
+      if(raw){
+        const saved = JSON.parse(raw);
+        S = Object.assign(base, saved);
+        // keep the step/rep keys fixed so stored lecture data still lines up
+        S.steps = base.steps.map(d => Object.assign({}, d, (saved.steps||[]).find(x => x.key === d.key) || {}));
+        S.reps  = base.reps.map(d => Object.assign({}, d, (saved.reps||[]).find(x => x.key === d.key) || {}));
+        if(!Array.isArray(S.modules)) S.modules = base.modules;
+        if(!Array.isArray(S.timetable)) S.timetable = base.timetable;
+      }
+    }catch(e){ S = base; }
+    settingsDirty = localStorage.getItem(SET_DIRTY_KEY) === '1';
+  }
+  function saveSettings(markDirty){
+    if(markDirty !== false){ S.updatedAt = nowIso(); settingsDirty = true; }
+    try{
+      localStorage.setItem(SET_KEY, JSON.stringify(S));
+      localStorage.setItem(SET_DIRTY_KEY, settingsDirty ? '1' : '0');
+    }catch(e){ console.error(e); }
+  }
+  function changeSettings(fn, opts){
+    fn(S);
+    saveSettings();
+    applySettings();
+    renderAll();
+    if(!opts || opts.redraw !== false) renderSettings();
+    scheduleSync();
+  }
+
+  function applySettings(){
+    const root = document.documentElement;
+    root.setAttribute('data-theme', S.theme === 'system' ? '' : S.theme);
+    if(S.theme === 'system') root.removeAttribute('data-theme');
+    root.style.setProperty('--accent', S.accent || '#2F6F5E');
+    root.style.setProperty('--base', S.density === 'compact' ? '13px' : (S.density === 'large' ? '15.5px' : '14px'));
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if(meta) meta.setAttribute('content', S.theme === 'dark' ? '#171B18' : '#EDEEE8');
+    document.getElementById('app-title').textContent = S.title || 'Recall Ledger';
+    document.title = (S.title || 'Recall Ledger') + ' — study planner';
+    document.getElementById('app-sub').textContent = S.subtitle || '';
+    document.getElementById('footer-note').innerHTML =
+      'Changes save on this device straight away and sync to your other devices when you are signed in. ' +
+      'Mastery is <strong>Complete</strong> once every active step is Done, <strong>Behind</strong> once a due date has passed while a step is still Pending, otherwise <strong>In Progress</strong>.';
+  }
+
+  /* ================= helpers ================= */
+  function todayStr(){
+    const d = new Date();
+    return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  }
+  function addDays(dateStr, n){
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + Number(n||0));
+    return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  }
+  function fmt(dateStr){
+    if(!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString(undefined, {month:'short', day:'2-digit', year:'2-digit'});
+  }
+  function uid(){ return 'l' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+  function nowIso(){ return new Date().toISOString(); }
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  /* ================= lecture state ================= */
+  let lectures = [];
+  let dirty = new Set();
+
+  function normalise(l){
+    return {
+      id: l.id || uid(),
+      date: l.date || todayStr(),
+      module: l.module || '',
+      title: l.title || '',
+      primary: l.primary || 'Pending',
+      uworld: l.uworld || 'Pending',
+      uworldPct: (l.uworldPct === undefined || l.uworldPct === '') ? null : l.uworldPct,
+      flashcards: l.flashcards || 'Pending',
+      rep1: l.rep1 || 'Pending',
+      rep2: l.rep2 || 'Pending',
+      rep3: l.rep3 || 'Pending',
+      rep4: l.rep4 || 'Pending',
+      deleted: !!l.deleted,
+      updatedAt: l.updatedAt || new Date(0).toISOString()
+    };
+  }
+  function loadLocal(){
+    try{
+      const raw = localStorage.getItem(STORE_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      lectures = Array.isArray(arr) ? arr.map(normalise) : [];
+    }catch(e){ lectures = []; }
+    try{
+      const raw = localStorage.getItem(DIRTY_KEY);
+      dirty = new Set(raw ? JSON.parse(raw) : []);
+    }catch(e){ dirty = new Set(); }
+  }
+  function saveLocal(){
+    try{
+      localStorage.setItem(STORE_KEY, JSON.stringify(lectures));
+      localStorage.setItem(DIRTY_KEY, JSON.stringify([...dirty]));
+    }catch(e){ console.error('Could not save locally', e); }
+  }
+  function touch(lec){
+    lec.updatedAt = nowIso();
+    dirty.add(lec.id);
+    saveLocal();
+    scheduleSync();
+  }
+  function live(){ return lectures.filter(l => !l.deleted); }
+
+  /* ================= schedule logic ================= */
+  function activeSteps(){
+    return [
+      ...S.steps.filter(s => s.enabled).map(s => ({key:s.key, label:s.label || s.key, offset:0, score:!!s.score})),
+      ...S.reps.filter(r => r.enabled).map(r => ({key:r.key, label:(r.label || r.key) + ' (+' + r.days + 'd)', offset:Number(r.days)||0, isRep:true}))
+    ];
+  }
+  function stepsOf(lec){
+    return activeSteps().map(s => ({
+      key: s.key, label: s.label,
+      date: s.offset ? addDays(lec.date, s.offset) : lec.date,
+      status: lec[s.key] || 'Pending'
+    }));
+  }
+  function mastery(lec){
+    const t = todayStr();
+    const steps = stepsOf(lec);
+    if(steps.length === 0) return 'In Progress';
+    if(steps.every(s => s.status === 'Done')) return 'Complete';
+    if(steps.some(s => s.status === 'Pending' && s.date <= t)) return 'Behind';
+    return 'In Progress';
+  }
+  function buildQueue(){
+    const t = todayStr();
+    const horizon = addDays(t, Math.max(0, Number(S.lookahead) || 0));
+    const items = [];
+    live().forEach(lec => {
+      stepsOf(lec).forEach(s => {
+        if(s.status === 'Pending' && s.date <= horizon){
+          items.push({lecId: lec.id, module: lec.module, title: lec.title, key: s.key,
+            label: s.label, date: s.date, overdue: s.date < t, dueToday: s.date === t});
+        }
+      });
+    });
+    items.sort((a,b) => a.date.localeCompare(b.date));
+    return items;
+  }
+
+  /* ================= rendering ================= */
+  function renderStats(){
+    const rows = live();
+    const total = rows.length;
+    let overdue = 0, dueToday = 0, complete = 0;
+    rows.forEach(lec => { if(mastery(lec) === 'Complete') complete++; });
+    buildQueue().forEach(i => { if(i.overdue) overdue++; if(i.dueToday) dueToday++; });
+    document.getElementById('stats').innerHTML = `
+      <div class="stat"><div class="n">${total}</div><div class="l">Lectures logged</div></div>
+      <div class="stat overdue"><div class="n">${overdue}</div><div class="l">Overdue steps</div></div>
+      <div class="stat today"><div class="n">${dueToday}</div><div class="l">Due today</div></div>
+      <div class="stat complete"><div class="n">${complete}</div><div class="l">Fully mastered</div></div>
+      <div class="stat"><div class="n">${total ? Math.round(complete/total*100) : 0}%</div><div class="l">Overall mastery</div></div>
+    `;
+  }
+
+  function renderQueue(){
+    const root = document.getElementById('queue-root');
+    const q = buildQueue();
+    if(q.length === 0){
+      root.innerHTML = '<div class="empty-note">Nothing due — log a lecture in the Ledger tab to start scheduling reviews.</div>';
+      return;
+    }
+    const overdue = q.filter(i => i.overdue);
+    const today = q.filter(i => i.dueToday);
+    const upcoming = q.filter(i => !i.overdue && !i.dueToday);
+
+    function group(title, cls, list){
+      if(list.length === 0) return '';
+      const rows = list.map(i => `
+        <div class="qrow ${cls}">
+          <div class="qdate">${fmt(i.date)}</div>
+          <div class="qmod">${esc(i.module)}</div>
+          <div class="qtitle">${esc(i.title)}</div>
+          <div class="qstep">${esc(i.label)}</div>
+          <button class="small" data-mark="${i.lecId}|${i.key}">Mark done</button>
+        </div>`).join('');
+      return `<div class="queue-group"><h3>${title} <span class="count">${list.length}</span></h3>${rows}</div>`;
+    }
+
+    const ahead = Math.max(0, Number(S.lookahead) || 0);
+    root.innerHTML =
+      group('Overdue', 'od', overdue) +
+      group('Due today', 'tod', today) +
+      group(ahead ? `Coming up (next ${ahead} day${ahead>1?'s':''})` : 'Coming up', 'up', upcoming);
+
+    root.querySelectorAll('[data-mark]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const [lecId, key] = btn.getAttribute('data-mark').split('|');
+        const lec = lectures.find(l => l.id === lecId);
+        if(!lec) return;
+        lec[key] = 'Done';
+        touch(lec);
+        renderAll();
+      });
+    });
+  }
+
+  function statusSelect(lecId, field, value){
+    return `<select class="status ${value==='Done'?'done':'pending'}" data-lec="${lecId}" data-field="${field}">
+      <option value="Pending" ${value==='Pending'?'selected':''}>Pending</option>
+      <option value="Done" ${value==='Done'?'selected':''}>Done</option>
+    </select>`;
+  }
+
+  function renderTable(){
+    const head = document.getElementById('table-head');
+    const tbody = document.getElementById('table-body');
+    const filterStatus = document.getElementById('filter-status').value;
+    const filterModule = document.getElementById('filter-module').value;
+    const search = document.getElementById('filter-search').value.trim().toLowerCase();
+    const t = todayStr();
+    const cols = activeSteps();
+    const uw = S.steps.find(s => s.key === 'uworld');
+    const showPct = !!(uw && uw.enabled && uw.score);
+
+    let th = '<th>Date</th><th>Module</th><th>Lecture / topic</th>';
+    cols.forEach(c => {
+      if(c.isRep) th += `<th>${esc(c.label)}</th><th></th>`;
+      else {
+        th += `<th>${esc(c.label)}</th>`;
+        if(c.key === 'uworld' && showPct) th += '<th>Score %</th>';
+      }
+    });
+    th += '<th>Mastery</th><th></th>';
+    head.innerHTML = th;
+
+    let rows = live().sort((a,b) => a.date.localeCompare(b.date));
+    if(filterStatus !== 'all') rows = rows.filter(l => mastery(l) === filterStatus);
+    if(filterModule !== 'all') rows = rows.filter(l => l.module === filterModule);
+    if(search) rows = rows.filter(l => (l.module+' '+l.title).toLowerCase().includes(search));
+
+    document.getElementById('empty-note').classList.toggle('hidden', live().length > 0);
+
+    tbody.innerHTML = rows.map(lec => {
+      const m = mastery(lec);
+      let cells = `<td class="date" data-label="Lecture date">${fmt(lec.date)}</td>
+        <td class="mod" data-label="Module">${esc(lec.module)}</td>
+        <td data-label="Topic">${esc(lec.title)}</td>`;
+      cols.forEach(c => {
+        const status = lec[c.key] || 'Pending';
+        if(c.isRep){
+          const date = addDays(lec.date, c.offset);
+          const cls = status === 'Pending' ? (date < t ? 'od' : (date === t ? 'tod' : '')) : '';
+          cells += `<td class="rep ${cls}" data-label="${esc(c.label)} due">${fmt(date)}</td>`;
+          cells += `<td data-label="${esc(c.label)}">${statusSelect(lec.id, c.key, status)}</td>`;
+        }else{
+          cells += `<td data-label="${esc(c.label)}">${statusSelect(lec.id, c.key, status)}</td>`;
+          if(c.key === 'uworld' && showPct){
+            cells += `<td data-label="Score %"><input class="pct" type="number" min="0" max="100" placeholder="—" value="${lec.uworldPct ?? ''}" data-lec="${lec.id}" data-field="uworldPct"></td>`;
+          }
+        }
+      });
+      cells += `<td data-label="Mastery"><span class="mastery ${m.replace(' ','-')}">${m}</span></td>
+        <td class="del"><button class="danger small" data-del="${lec.id}">Delete</button></td>`;
+      return `<tr class="${m==='Complete' ? 'row-complete' : ''}" data-row="${lec.id}">${cells}</tr>`;
+    }).join('');
+
+    tbody.querySelectorAll('select[data-lec]').forEach(sel => {
+      sel.addEventListener('change', () => {
+        const lec = lectures.find(l => l.id === sel.getAttribute('data-lec'));
+        if(!lec) return;
+        lec[sel.getAttribute('data-field')] = sel.value;
+        touch(lec);
+        renderAll();
+      });
+    });
+    tbody.querySelectorAll('input.pct').forEach(inp => {
+      inp.addEventListener('change', () => {
+        const lec = lectures.find(l => l.id === inp.getAttribute('data-lec'));
+        if(!lec) return;
+        lec.uworldPct = inp.value === '' ? null : Math.max(0, Math.min(100, Number(inp.value)));
+        touch(lec);
+      });
+    });
+    tbody.querySelectorAll('[data-del]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if(!confirm('Delete this lecture and its schedule?')) return;
+        const lec = lectures.find(l => l.id === btn.getAttribute('data-del'));
+        if(!lec) return;
+        lec.deleted = true;
+        touch(lec);
+        renderAll();
+      });
+    });
+  }
+
+  function allModules(){
+    const set = new Set((S.modules || []).filter(Boolean));
+    live().forEach(l => { if(l.module) set.add(l.module); });
+    return [...set];
+  }
+
+  function renderModuleInputs(){
+    document.getElementById('module-list').innerHTML =
+      allModules().map(m => `<option value="${esc(m)}">`).join('');
+    const sel = document.getElementById('filter-module');
+    const current = sel.value;
+    sel.innerHTML = '<option value="all">All modules</option>' +
+      allModules().map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
+    if([...sel.options].some(o => o.value === current)) sel.value = current;
+  }
+
+  function renderChips(){
+    const root = document.getElementById('timetable-chips');
+    const chips = [];
+    (S.timetable || []).forEach(day => {
+      (day.subjects || []).forEach(s => {
+        chips.push(`<div class="chip" data-mod="${esc(s)}">${esc(day.day)} · ${esc(s)}</div>`);
+      });
+    });
+    root.innerHTML = chips.join('');
+    root.querySelectorAll('.chip').forEach(c => {
+      c.addEventListener('click', () => {
+        document.getElementById('in-module').value = c.getAttribute('data-mod');
+        document.getElementById('in-title').focus();
+      });
+    });
+  }
+
+  function renderAll(){
+    renderStats();
+    renderQueue();
+    renderTable();
+    renderModuleInputs();
+    renderChips();
+  }
+
+  /* ================= settings screen ================= */
+  function renderSettings(){
+    const root = document.getElementById('settings-root');
+    const uw = S.steps.find(s => s.key === 'uworld');
+
+    root.innerHTML = `
+      <div class="card">
+        <h3>Appearance</h3>
+        <p class="hint">Applies to this device immediately and to your other device on its next sync.</p>
+        <div class="stack">
+          <div class="field">
+            <label>Theme</label>
+            <div class="segment" data-seg="theme">
+              <button data-val="system" class="${S.theme==='system'?'on':''}">Match device</button>
+              <button data-val="light" class="${S.theme==='light'?'on':''}">Light</button>
+              <button data-val="dark" class="${S.theme==='dark'?'on':''}">Dark</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Text size</label>
+            <div class="segment" data-seg="density">
+              <button data-val="compact" class="${S.density==='compact'?'on':''}">Compact</button>
+              <button data-val="normal" class="${S.density==='normal'?'on':''}">Normal</button>
+              <button data-val="large" class="${S.density==='large'?'on':''}">Large</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Accent colour</label>
+            <div class="swatches">
+              ${ACCENTS.map(a => `<button class="swatch ${S.accent===a.hex?'on':''}" style="background:${a.hex}" data-accent="${a.hex}" title="${a.name}" aria-label="${a.name}"></button>`).join('')}
+              <input type="color" id="accent-custom" value="${esc(S.accent)}" style="width:44px;height:30px;padding:2px;" aria-label="Custom accent colour">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Wording</h3>
+        <p class="hint">What this planner calls itself, at the top of every screen.</p>
+        <div class="stack">
+          <div class="field">
+            <label for="set-title">Title</label>
+            <input type="text" id="set-title" value="${esc(S.title)}">
+          </div>
+          <div class="field">
+            <label for="set-sub">Subtitle</label>
+            <input type="text" id="set-sub" value="${esc(S.subtitle)}">
+          </div>
+          <div class="field">
+            <label>Tab to open first</label>
+            <div class="segment" data-seg="startTab">
+              <button data-val="today" class="${S.startTab==='today'?'on':''}">Queue</button>
+              <button data-val="ledger" class="${S.startTab==='ledger'?'on':''}">Ledger</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Study steps</h3>
+        <p class="hint">The work you do on the day of a lecture. Turn off anything you don't use; rename the rest to match your resources.</p>
+        ${S.steps.map((s,i) => `
+          <div class="srow">
+            <input type="checkbox" data-step-on="${i}" ${s.enabled?'checked':''} aria-label="Use ${esc(s.label)}">
+            <input type="text" data-step-label="${i}" value="${esc(s.label)}">
+            ${s.key==='uworld' ? `<label class="name" style="flex:none;font-size:12px;color:var(--ink-soft);"><input type="checkbox" id="uworld-score" ${uw && uw.score?'checked':''}> score %</label>` : ''}
+          </div>`).join('')}
+      </div>
+
+      <div class="card">
+        <h3>Review intervals</h3>
+        <p class="hint">Days after the lecture that each review falls due. Changing a number reschedules every lecture, including old ones.</p>
+        ${S.reps.map((r,i) => `
+          <div class="srow">
+            <input type="checkbox" data-rep-on="${i}" ${r.enabled?'checked':''} aria-label="Use ${esc(r.label)}">
+            <input type="text" data-rep-label="${i}" value="${esc(r.label)}">
+            <input type="number" class="days" min="0" max="365" data-rep-days="${i}" value="${Number(r.days)}">
+            <span class="tagname">days</span>
+          </div>`).join('')}
+        <div class="srow">
+          <label class="name" for="set-lookahead">Show upcoming work this many days ahead</label>
+          <input type="number" class="days" id="set-lookahead" min="0" max="60" value="${Number(S.lookahead)}">
+        </div>
+      </div>
+
+      <div class="card wide">
+        <h3>Modules</h3>
+        <p class="hint">Suggested as you type a lecture, and used by the module filter. Removing one here never touches lectures you already logged.</p>
+        <div class="tagline">
+          ${(S.modules||[]).map((m,i) => `<span class="tag">${esc(m)}<button data-mod-del="${i}" aria-label="Remove ${esc(m)}">×</button></span>`).join('') || '<span class="hint">No modules yet.</span>'}
+        </div>
+        <div class="inline-add">
+          <input type="text" id="mod-new" placeholder="Add a module, e.g. Neurology">
+          <button id="mod-add">Add</button>
+        </div>
+      </div>
+
+      <div class="card wide">
+        <h3>Weekly timetable</h3>
+        <p class="hint">Shortcut buttons above the ledger. Write the subjects for a day separated by commas.</p>
+        ${(S.timetable||[]).map((d,i) => `
+          <div class="ttrow">
+            <input type="text" class="day" data-tt-day="${i}" value="${esc(d.day)}" aria-label="Day name">
+            <input type="text" class="subs" data-tt-subs="${i}" value="${esc((d.subjects||[]).join(', '))}" aria-label="Subjects">
+            <button class="danger small" data-tt-del="${i}">Remove</button>
+          </div>`).join('')}
+        <div class="srow"><button class="ghost small" id="tt-add">Add a day</button></div>
+      </div>
+
+      <div class="card wide">
+        <h3>Your data</h3>
+        <p class="hint">Backups work offline and can be imported on any device.</p>
+        <div class="srow" style="flex-wrap:wrap;gap:8px;">
+          <button class="ghost small" id="set-export-json">Export backup (.json)</button>
+          <button class="ghost small" id="set-export-csv">Export CSV</button>
+          <label class="ghost small" style="display:inline-flex;align-items:center;padding:4px 10px;border:1px solid var(--line-strong);border-radius:3px;cursor:pointer;font-size:11.5px;">
+            Import backup
+            <input type="file" id="set-import" accept="application/json" class="hidden">
+          </label>
+          <button class="ghost small" id="set-export-settings">Export settings</button>
+          <label class="ghost small" style="display:inline-flex;align-items:center;padding:4px 10px;border:1px solid var(--line-strong);border-radius:3px;cursor:pointer;font-size:11.5px;">
+            Import settings
+            <input type="file" id="set-import-settings" accept="application/json" class="hidden">
+          </label>
+        </div>
+      </div>
+
+      <div class="card wide danger-zone">
+        <h3>Reset</h3>
+        <p class="hint">Deleting lectures removes them from every device you're signed in on. Export a backup first if you're unsure.</p>
+        <div class="srow" style="flex-wrap:wrap;gap:8px;">
+          <button class="ghost small" id="set-reset">Reset settings to defaults</button>
+          <button class="danger small" id="set-wipe">Delete all lectures</button>
+        </div>
+      </div>
+    `;
+
+    wireSettings();
+  }
+
+  function wireSettings(){
+    const root = document.getElementById('settings-root');
+
+    root.querySelectorAll('.segment').forEach(seg => {
+      const key = seg.getAttribute('data-seg');
+      seg.querySelectorAll('button').forEach(b => {
+        b.addEventListener('click', () => changeSettings(s => { s[key] = b.getAttribute('data-val'); }));
+      });
+    });
+    root.querySelectorAll('[data-accent]').forEach(b => {
+      b.addEventListener('click', () => changeSettings(s => { s.accent = b.getAttribute('data-accent'); }));
+    });
+    const custom = root.querySelector('#accent-custom');
+    if(custom) custom.addEventListener('change', () => changeSettings(s => { s.accent = custom.value; }));
+
+    const liveText = (sel, apply) => {
+      const el = root.querySelector(sel);
+      if(!el) return;
+      el.addEventListener('input', () => changeSettings(s => apply(s, el.value), {redraw:false}));
+    };
+    liveText('#set-title', (s,v) => s.title = v);
+    liveText('#set-sub', (s,v) => s.subtitle = v);
+
+    root.querySelectorAll('[data-step-on]').forEach(cb => {
+      cb.addEventListener('change', () => changeSettings(s => { s.steps[+cb.getAttribute('data-step-on')].enabled = cb.checked; }));
+    });
+    root.querySelectorAll('[data-step-label]').forEach(inp => {
+      inp.addEventListener('input', () => changeSettings(s => { s.steps[+inp.getAttribute('data-step-label')].label = inp.value; }, {redraw:false}));
+    });
+    const score = root.querySelector('#uworld-score');
+    if(score) score.addEventListener('change', () => changeSettings(s => {
+      const u = s.steps.find(x => x.key === 'uworld'); if(u) u.score = score.checked;
+    }));
+
+    root.querySelectorAll('[data-rep-on]').forEach(cb => {
+      cb.addEventListener('change', () => changeSettings(s => { s.reps[+cb.getAttribute('data-rep-on')].enabled = cb.checked; }));
+    });
+    root.querySelectorAll('[data-rep-label]').forEach(inp => {
+      inp.addEventListener('input', () => changeSettings(s => { s.reps[+inp.getAttribute('data-rep-label')].label = inp.value; }, {redraw:false}));
+    });
+    root.querySelectorAll('[data-rep-days]').forEach(inp => {
+      inp.addEventListener('change', () => changeSettings(s => {
+        s.reps[+inp.getAttribute('data-rep-days')].days = Math.max(0, Math.min(365, Number(inp.value) || 0));
+      }));
+    });
+    const look = root.querySelector('#set-lookahead');
+    if(look) look.addEventListener('change', () => changeSettings(s => {
+      s.lookahead = Math.max(0, Math.min(60, Number(look.value) || 0));
+    }));
+
+    root.querySelectorAll('[data-mod-del]').forEach(b => {
+      b.addEventListener('click', () => changeSettings(s => { s.modules.splice(+b.getAttribute('data-mod-del'), 1); }));
+    });
+    const modNew = root.querySelector('#mod-new');
+    const addModule = () => {
+      const v = modNew.value.trim();
+      if(!v) return;
+      if(!S.modules.includes(v)) changeSettings(s => { s.modules.push(v); });
+      else modNew.value = '';
+    };
+    root.querySelector('#mod-add').addEventListener('click', addModule);
+    modNew.addEventListener('keydown', e => { if(e.key === 'Enter') addModule(); });
+
+    root.querySelectorAll('[data-tt-day]').forEach(inp => {
+      inp.addEventListener('input', () => changeSettings(s => { s.timetable[+inp.getAttribute('data-tt-day')].day = inp.value; }, {redraw:false}));
+    });
+    root.querySelectorAll('[data-tt-subs]').forEach(inp => {
+      inp.addEventListener('input', () => changeSettings(s => {
+        s.timetable[+inp.getAttribute('data-tt-subs')].subjects =
+          inp.value.split(',').map(x => x.trim()).filter(Boolean);
+      }, {redraw:false}));
+    });
+    root.querySelectorAll('[data-tt-del]').forEach(b => {
+      b.addEventListener('click', () => changeSettings(s => { s.timetable.splice(+b.getAttribute('data-tt-del'), 1); }));
+    });
+    root.querySelector('#tt-add').addEventListener('click', () => changeSettings(s => {
+      s.timetable.push({day:'New day', subjects:[]});
+    }));
+
+    root.querySelector('#set-export-json').addEventListener('click', exportJson);
+    root.querySelector('#set-export-csv').addEventListener('click', exportCsv);
+    root.querySelector('#set-import').addEventListener('change', e => {
+      if(e.target.files[0]) importJson(e.target.files[0]);
+      e.target.value = '';
+    });
+    root.querySelector('#set-export-settings').addEventListener('click', () => {
+      download('recall-ledger-settings.json', JSON.stringify(S, null, 2), 'application/json');
+    });
+    root.querySelector('#set-import-settings').addEventListener('change', e => {
+      const file = e.target.files[0];
+      e.target.value = '';
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try{
+          const incoming = JSON.parse(reader.result);
+          if(typeof incoming !== 'object' || Array.isArray(incoming)) throw new Error('bad');
+          changeSettings(s => Object.assign(s, incoming));
+          alert('Settings imported.');
+        }catch(err){ alert('That file is not a Recall Ledger settings export.'); }
+      };
+      reader.readAsText(file);
+    });
+
+    root.querySelector('#set-reset').addEventListener('click', () => {
+      if(!confirm('Put every setting back to its default? Your lectures are not affected.')) return;
+      changeSettings(s => Object.assign(s, defaults()));
+    });
+    root.querySelector('#set-wipe').addEventListener('click', () => {
+      if(!confirm('Delete every lecture on every signed-in device? This cannot be undone.')) return;
+      if(!confirm('Last check — delete all ' + live().length + ' lectures?')) return;
+      live().forEach(l => { l.deleted = true; touch(l); });
+      renderAll();
+    });
+  }
+
+  /* ================= actions ================= */
+  function addLecture(){
+    const date = document.getElementById('in-date').value || todayStr();
+    const module = document.getElementById('in-module').value.trim();
+    const title = document.getElementById('in-title').value.trim();
+    if(!module || !title){
+      alert('Add a module and a lecture title first.');
+      return;
+    }
+    const lec = normalise({id: uid(), date, module, title});
+    lectures.push(lec);
+    touch(lec);
+    document.getElementById('in-title').value = '';
+    document.getElementById('in-module').value = '';
+    renderAll();
+  }
+
+  function download(name, content, type){
+    const blob = new Blob([content], {type});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  function exportJson(){
+    download('recall-ledger-backup.json', JSON.stringify(live(), null, 2), 'application/json');
+  }
+  function exportCsv(){
+    const cols = activeSteps();
+    const headers = ['Date','Module','Title'];
+    cols.forEach(c => {
+      if(c.isRep) headers.push(c.label + ' due', c.label);
+      else { headers.push(c.label); if(c.key === 'uworld') headers.push('Score %'); }
+    });
+    headers.push('Mastery');
+    const rows = live().map(lec => {
+      const vals = [lec.date, lec.module, lec.title];
+      cols.forEach(c => {
+        if(c.isRep){ vals.push(addDays(lec.date, c.offset), lec[c.key] || 'Pending'); }
+        else { vals.push(lec[c.key] || 'Pending'); if(c.key === 'uworld') vals.push(lec.uworldPct ?? ''); }
+      });
+      vals.push(mastery(lec));
+      return vals.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',');
+    });
+    download('recall-ledger.csv', [headers.join(','), ...rows].join('\n'), 'text/csv');
+  }
+  function importJson(file){
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const data = JSON.parse(reader.result);
+        if(!Array.isArray(data)) throw new Error('bad format');
+        data.map(normalise).forEach(inc => {
+          const existing = lectures.find(l => l.id === inc.id);
+          if(existing){ Object.assign(existing, inc); touch(existing); }
+          else { lectures.push(inc); touch(inc); }
+        });
+        renderAll();
+        alert('Backup imported.');
+      }catch(e){
+        alert('Could not read that file — expecting a Recall Ledger .json backup.');
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  /* ================= cloud sync ================= */
+  const CFG = window.RECALL_CONFIG || {};
+  const hasCloud = !!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY && window.supabase);
+  const sb = hasCloud ? window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY) : null;
+  let user = null;
+  let syncTimer = null;
+  let channel = null;
+  let lastSynced = null;
+  let syncing = false;
+
+  const dot = document.getElementById('sync-dot');
+  const text = document.getElementById('sync-text');
+  const btnSync = document.getElementById('btn-sync');
+  const btnSignInOpen = document.getElementById('btn-signin-open');
+  const btnSignOut = document.getElementById('btn-signout');
+
+  function setStatus(state, msg){
+    dot.className = 'dot' + (state ? ' ' + state : '');
+    text.textContent = msg;
+  }
+  function refreshBar(){
+    btnSync.classList.toggle('hidden', !user);
+    btnSignOut.classList.toggle('hidden', !user);
+    btnSignInOpen.classList.toggle('hidden', !!user || !hasCloud);
+    if(!hasCloud){
+      setStatus('', 'Saved on this device only — cloud sync is not set up yet.');
+    }else if(!user){
+      setStatus('', 'Saved on this device only. Sign in to sync with your other device.');
+    }else{
+      const pending = dirty.size + (settingsDirty ? 1 : 0);
+      const when = lastSynced ? lastSynced.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}) : '—';
+      setStatus('ok', pending ? `${user.email} · ${pending} change${pending>1?'s':''} waiting to upload`
+                               : `${user.email} · synced at ${when}`);
+    }
+  }
+
+  function toRow(l){
+    return {
+      id: l.id, user_id: user.id, date: l.date, module: l.module, title: l.title,
+      primary_reading: l.primary, uworld: l.uworld, uworld_pct: l.uworldPct,
+      flashcards: l.flashcards, rep1: l.rep1, rep2: l.rep2, rep3: l.rep3, rep4: l.rep4,
+      deleted: !!l.deleted, updated_at: l.updatedAt
+    };
+  }
+  function fromRow(r){
+    return normalise({
+      id: r.id, date: r.date, module: r.module, title: r.title,
+      primary: r.primary_reading, uworld: r.uworld, uworldPct: r.uworld_pct,
+      flashcards: r.flashcards, rep1: r.rep1, rep2: r.rep2, rep3: r.rep3, rep4: r.rep4,
+      deleted: r.deleted, updatedAt: r.updated_at
+    });
+  }
+  function mergeRow(row){
+    const inc = fromRow(row);
+    const idx = lectures.findIndex(l => l.id === inc.id);
+    if(idx === -1){ lectures.push(inc); return true; }
+    if(inc.updatedAt > lectures[idx].updatedAt){
+      lectures[idx] = inc;
+      dirty.delete(inc.id);
+      return true;
+    }
+    return false;
+  }
+
+  async function syncNow(){
+    if(!sb || !user || syncing) return;
+    syncing = true;
+    setStatus('busy', 'Syncing…');
+    try{
+      const {data, error} = await sb.from('lectures').select('*');
+      if(error) throw error;
+      let changed = false;
+      (data || []).forEach(row => { if(mergeRow(row)) changed = true; });
+
+      const toPush = lectures.filter(l => dirty.has(l.id));
+      if(toPush.length){
+        const {error: upErr} = await sb.from('lectures').upsert(toPush.map(toRow), {onConflict:'id'});
+        if(upErr) throw upErr;
+        toPush.forEach(l => dirty.delete(l.id));
+      }
+      saveLocal();
+
+      // settings travel with the account, newest edit wins
+      const {data: sData, error: sErr} = await sb.from('settings').select('*').eq('user_id', user.id).maybeSingle();
+      if(sErr && sErr.code !== 'PGRST116') throw sErr;
+      let settingsChanged = false;
+      if(sData && sData.data && sData.data.updatedAt && sData.data.updatedAt > (S.updatedAt || '')){
+        S = Object.assign(defaults(), sData.data);
+        settingsDirty = false;
+        saveSettings(false);
+        applySettings();
+        renderSettings();
+        settingsChanged = true;
+      }else if(settingsDirty || !sData){
+        const {error: sUp} = await sb.from('settings')
+          .upsert({user_id: user.id, data: S, updated_at: S.updatedAt || nowIso()}, {onConflict:'user_id'});
+        if(sUp) throw sUp;
+        settingsDirty = false;
+        saveSettings(false);
+      }
+
+      lastSynced = new Date();
+      if(changed || settingsChanged) renderAll();
+      refreshBar();
+    }catch(e){
+      console.error(e);
+      setStatus('bad', 'Sync paused — ' + (e.message || 'no connection') + '. Your work is safe on this device.');
+    }finally{
+      syncing = false;
+    }
+  }
+  function scheduleSync(){
+    if(!sb || !user){ refreshBar(); return; }
+    refreshBar();
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(syncNow, 1200);
+  }
+
+  function subscribeRealtime(){
+    if(!sb || !user) return;
+    if(channel) sb.removeChannel(channel);
+    channel = sb.channel('ledger-' + user.id)
+      .on('postgres_changes',
+        {event:'*', schema:'public', table:'lectures', filter:'user_id=eq.' + user.id},
+        payload => {
+          if(payload.new && mergeRow(payload.new)){
+            saveLocal(); renderAll(); refreshBar();
+          }
+        })
+      .on('postgres_changes',
+        {event:'*', schema:'public', table:'settings', filter:'user_id=eq.' + user.id},
+        payload => {
+          const incoming = payload.new && payload.new.data;
+          if(incoming && incoming.updatedAt && incoming.updatedAt > (S.updatedAt || '')){
+            S = Object.assign(defaults(), incoming);
+            settingsDirty = false;
+            saveSettings(false);
+            applySettings(); renderAll(); renderSettings(); refreshBar();
+          }
+        })
+      .subscribe();
+  }
+
+  /* ================= auth ================= */
+  const overlay = document.getElementById('auth-overlay');
+  const authMsg = document.getElementById('auth-msg');
+  function openAuth(){ overlay.classList.remove('hidden'); document.getElementById('auth-email').focus(); }
+  function closeAuth(){ overlay.classList.add('hidden'); authMsg.textContent = ''; }
+  function authSays(kind, m){ authMsg.className = 'msg ' + kind; authMsg.textContent = m; }
+
+  async function doAuth(mode){
+    if(!sb){ authSays('bad', 'Cloud sync is not configured in config.js yet.'); return; }
+    const email = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value;
+    if(!email || password.length < 6){
+      authSays('bad', 'Enter your email and a password of at least 6 characters.');
+      return;
+    }
+    authSays('', 'Working…');
+    try{
+      const {data, error} = mode === 'signup'
+        ? await sb.auth.signUp({email, password})
+        : await sb.auth.signInWithPassword({email, password});
+      if(error) throw error;
+      if(mode === 'signup' && data.user && !data.session){
+        authSays('good', 'Account created. Confirm it from your email, then sign in.');
+        return;
+      }
+      closeAuth();
+    }catch(e){
+      authSays('bad', e.message || 'That did not work.');
+    }
+  }
+
+  async function onSignedIn(session){
+    user = session.user;
+    localStorage.removeItem(SKIP_AUTH_KEY);
+    closeAuth();
+    lectures.forEach(l => dirty.add(l.id));
+    saveLocal();
+    refreshBar();
+    await syncNow();
+    subscribeRealtime();
+  }
+  function onSignedOut(){
+    user = null;
+    if(channel && sb){ sb.removeChannel(channel); channel = null; }
+    refreshBar();
+  }
+
+  /* ================= startup ================= */
+  loadSettings();
+  loadLocal();
+  applySettings();
+
+  document.getElementById('today-label').textContent = new Date().toLocaleDateString(undefined,
+    {weekday:'long', month:'long', day:'numeric', year:'numeric'});
+  document.getElementById('in-date').value = todayStr();
+
+  function openTab(name){
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.getAttribute('data-tab') === name));
+    document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
+  }
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => openTab(tab.getAttribute('data-tab')));
+  });
+
+  document.getElementById('btn-add').addEventListener('click', addLecture);
+  document.getElementById('in-title').addEventListener('keydown', e => { if(e.key === 'Enter') addLecture(); });
+  document.getElementById('filter-status').addEventListener('change', renderTable);
+  document.getElementById('filter-module').addEventListener('change', renderTable);
+  document.getElementById('filter-search').addEventListener('input', renderTable);
+  document.getElementById('btn-export-json').addEventListener('click', exportJson);
+  document.getElementById('btn-export-csv').addEventListener('click', exportCsv);
+  document.getElementById('file-import').addEventListener('change', e => {
+    if(e.target.files[0]) importJson(e.target.files[0]);
+    e.target.value = '';
+  });
+
+  btnSync.addEventListener('click', syncNow);
+  btnSignInOpen.addEventListener('click', openAuth);
+  btnSignOut.addEventListener('click', async () => { if(sb) await sb.auth.signOut(); });
+  document.getElementById('btn-signin').addEventListener('click', () => doAuth('signin'));
+  document.getElementById('btn-signup').addEventListener('click', () => doAuth('signup'));
+  document.getElementById('auth-password').addEventListener('keydown', e => { if(e.key === 'Enter') doAuth('signin'); });
+  document.getElementById('btn-auth-close').addEventListener('click', () => {
+    localStorage.setItem(SKIP_AUTH_KEY, '1');
+    closeAuth();
+  });
+
+  renderAll();
+  renderSettings();
+  refreshBar();
+  if(S.startTab === 'ledger') openTab('ledger');
+
+  if(sb){
+    sb.auth.onAuthStateChange((event, session) => {
+      if(session && session.user) onSignedIn(session);
+      else onSignedOut();
+    });
+    sb.auth.getSession().then(({data}) => {
+      if(data.session) onSignedIn(data.session);
+      else if(!localStorage.getItem(SKIP_AUTH_KEY)) openAuth();
+    });
+    document.addEventListener('visibilitychange', () => { if(!document.hidden) syncNow(); });
+    window.addEventListener('online', syncNow);
+    setInterval(syncNow, 60000);
+  }
+
+  let dayStamp = todayStr();
+  setInterval(() => {
+    if(todayStr() !== dayStamp){ dayStamp = todayStr(); renderAll(); }
+  }, 60000);
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+  }
+})();
+</script>
+</body>
+</html>
