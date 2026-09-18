@@ -1178,8 +1178,31 @@
 
   /* ================= cloud sync ================= */
   const CFG = window.RECALL_CONFIG || {};
-  const hasCloud = !!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY && window.supabase);
-  const sb = hasCloud ? window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY) : null;
+
+  // Accepts whatever got pasted into config.js and reduces it to https://<ref>.supabase.co
+  // (no trailing slash, no /rest/v1, and the dashboard address converted to the API one).
+  function cleanUrl(raw){
+    let v = String(raw || '').trim().replace(/^["']|["']$/g, '');
+    if(!v) return '';
+    if(!/^https?:\/\//i.test(v)) v = 'https://' + v;
+    let u;
+    try{ u = new URL(v); }catch(e){ return ''; }
+    const dash = u.pathname.match(/\/project\/([a-z0-9]+)/i);
+    if(dash) return 'https://' + dash[1] + '.supabase.co';
+    return u.protocol + '//' + u.host;
+  }
+  const SB_URL = cleanUrl(CFG.SUPABASE_URL);
+  const SB_KEY = String(CFG.SUPABASE_ANON_KEY || '').trim();
+  const configProblem =
+    (!SB_URL || !SB_KEY) ? '' :
+    (!/\.supabase\.(co|in)$/i.test(new URL(SB_URL).host)
+      ? 'The project URL in config.js does not look like a Supabase address. It should read https://yourref.supabase.co'
+      : (SB_KEY.split('.').length !== 3
+        ? 'The key in config.js does not look like the anon key. Copy the long "anon public" value from Settings → API.'
+        : ''));
+
+  const hasCloud = !!(SB_URL && SB_KEY && window.supabase);
+  const sb = hasCloud ? window.supabase.createClient(SB_URL, SB_KEY) : null;
   let user = null;
   let syncTimer = null;
   let channel = null;
@@ -1322,7 +1345,11 @@
   /* ================= auth ================= */
   const overlay = document.getElementById('auth-overlay');
   const authMsg = document.getElementById('auth-msg');
-  function openAuth(){ overlay.classList.remove('hidden'); document.getElementById('auth-email').focus(); }
+  function openAuth(){
+    overlay.classList.remove('hidden');
+    if(configProblem) authSays('bad', configProblem);
+    document.getElementById('auth-email').focus();
+  }
   function closeAuth(){ overlay.classList.add('hidden'); authMsg.textContent = ''; }
   function authSays(kind, m){ authMsg.className = 'msg ' + kind; authMsg.textContent = m; }
 
@@ -1346,7 +1373,13 @@
       }
       closeAuth();
     }catch(e){
-      authSays('bad', e.message || 'That did not work.');
+      const m = e.message || 'That did not work.';
+      if(/invalid path|not found|failed to fetch|<!doctype/i.test(m)){
+        authSays('bad', 'The app could not reach your project at ' + SB_URL +
+          '. Check SUPABASE_URL in config.js — it should be exactly https://yourref.supabase.co with nothing after it.');
+      }else{
+        authSays('bad', m);
+      }
     }
   }
 

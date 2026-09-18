@@ -143,3 +143,33 @@ Otherwise a device may keep showing the old version for a while.
   3am in Baghdad it treated "today" as yesterday and marked reps overdue a day early.
 - Inputs are 16px on mobile so iOS stops zooming in when you tap a field.
 - Delete now shows the word *Delete* rather than a small ✕, and export ignores deleted rows.
+
+---
+
+## If sign-in fails
+
+**"Invalid path specified in request URL"** — the address in `config.js` has something extra
+on it. It must be the project API URL and nothing more:
+
+```js
+SUPABASE_URL: "https://abcdefgh.supabase.co",   // correct
+SUPABASE_URL: "https://abcdefgh.supabase.co/",  // trailing slash breaks it
+SUPABASE_URL: "https://abcdefgh.supabase.co/rest/v1",              // wrong
+SUPABASE_URL: "https://supabase.com/dashboard/project/abcdefgh",   // dashboard, not API
+```
+
+Find the right one in Supabase under **Settings → API → Project URL**. This version of the
+app trims a trailing slash or a stray path for you, and even converts a pasted dashboard
+link, but it's worth fixing the file so it reads cleanly.
+
+**"Invalid login credentials"** — the account doesn't exist yet. Click *Create account*
+rather than *Sign in* the first time.
+
+**"Email not confirmed"** — turn *Confirm email* off under Authentication → Sign in /
+Providers → Email, or click the link Supabase emailed you.
+
+**Nothing happens and the bar says cloud sync is not set up** — `config.js` is still empty,
+or it didn't upload to GitHub. Check the file is listed in your repository.
+
+**Errors mentioning `settings` or `lectures` not existing** — `schema.sql` hasn't been run, or
+was run before the settings table was added. Run the whole file again in the SQL Editor.

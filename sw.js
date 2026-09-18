@@ -1,6 +1,6 @@
 /* Recall Ledger service worker — lets the app open with no connection.
    Bump CACHE when you change index.html so devices pick up the new version. */
-const CACHE = 'recall-ledger-v2';
+const CACHE = 'recall-ledger-v3';
 const ASSETS = [
   './',
   './index.html',
